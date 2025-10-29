@@ -9,34 +9,29 @@ namespace com.demo
 {
 
     /// <ExplanationForDemo>
-    ///    This is a wrapper for animations, using the API from the Unity animator system.
-    ///    It allows to await calls to the system, and to combine usage of the Unity animator with own code driven solutions.
-    ///    DoTween is also already directly supported.
+    ///    This is a wrapper for animations, duplicating the API of the Unity animator system, to combine thhe usage of the Unity
+    ///    animator with own code driven solutions. DoTween is also already directly supported.
+    ///    It is also providing awaitable async wrappers.
     ///
-    ///    This allows e.G. programmers to quickly set up an animation by code, and artists to override them by defining the parameters in the Unity animator.
-    ///    Daisy chaining dynamic code driven animations with static animator calls up to triggering particle systems can all be done using this system.
+    ///    This allows programmers to quickly set up an animation by code, and artists to override them by defining the parameters in the Unity animator.
+    ///    It is possible to daisy chain dynamic code driven animations (up to triggering particle systems) with static animator calls.
     ///
-    ///    On the downside are some conventions for the animation states, when the Unity animator is used.
+    ///    On the downside are some conventions for the defining animation states when using the Unity animator.
     ///
     ///    
-    /// <!ExplanationForDemo>
+    /// </explanationForDemo>
 
     /// <summary>
     /// Here were links to the documentation
     /// </summary>
     public class AnimationThingyDemo : MonoBehaviour
-
     {
+    
     protected const string ShowTrigger = "Show";
     protected const string HideTrigger = "Hide";
     private const string ResetTrigger = "Reset";
     private const string ShowBoolean = "IsShowing";
 
-    public bool
-        WorkaroundBool; //Yeah, don't ask... But as you asked: At the moment this was necessary to have a 1 frame animation inside a state,
-    //which unity would just not provide by any other means than manipulating SOMETHING in that frame. :) 
-
-    public bool IsInitialized { get; private set; }
     protected Animator animator;
 
 
@@ -52,17 +47,9 @@ namespace com.demo
 
     protected virtual void Awake()
     {
-        //We need to do init in Awake as animator.parameters will be empty if Awake has not been called.
         animator = gameObject.GetComponent<Animator>();
-        if (animator == null)
-        {
-            IsInitialized = true;
-            return;
-        }
-
-        ReadAnimatorParameters();
-
-        IsInitialized = true;
+        if (animator != null)
+            ReadAnimatorParameters();
     }
 
     private void ReadAnimatorParameters()
@@ -89,6 +76,9 @@ namespace com.demo
         }
     }
 
+    /// <summary>
+    /// In case of using the Unity animator, this needs to be called from the animation flow itself, once it is considered finished
+    /// </summary>
     [UsedImplicitly]
     protected virtual void OnAnimationFinished()
     {
@@ -251,73 +241,6 @@ namespace com.demo
         }
     }
 
-    /// <summary>
-    /// Triggers and awaits the "Hide" animation.
-    /// Hide animation must not have an OnAnimationFinished call serialized to be used that way.
-    /// Hide animation must be in layer 0 for this.
-    /// </summary>
-    [Obsolete]
-    public async Task HideNoCallbackAsync()
-    {
-        await SetTriggerNoCallbackAsync(HideTrigger);
-    }
-
-    /// <summary>
-    /// Triggers and awaits the "Show" animation.
-    /// Show animation must not have an OnAnimationFinished call serialized to be used that way.
-    /// Show animation must be in layer 0 for this.
-    /// </summary>
-    [Obsolete]
-    public async Task ShowNoCallbackAsync()
-    {
-        await SetTriggerNoCallbackAsync(ShowTrigger);
-    }
-
-    /// <summary>
-    /// Awaits the end of an animation triggered right before.
-    /// This animation must not have an OnAnimationFinished call serialized.
-    /// This animation must be in layer 0.
-    /// </summary>
-    [Obsolete]
-    public async Task SetTriggerNoCallbackAsync(string name)
-    {
-        SetTrigger(name);
-        await WaitForCallbackFreeAnimationFinished();
-    }
-
-    /// <summary>
-    /// Awaits the end of an animation triggered right before.
-    /// This animation must not have an OnAnimationFinished call serialized.
-    /// This animation must be in layer 0.
-    /// </summary>
-    [Obsolete]
-    private async Task WaitForCallbackFreeAnimationFinished()
-    {
-        AnimatorStateInfo state;
-        AnimatorTransitionInfo transitionInfo;
-
-        //wait until transition is finished.
-        do
-        {
-            await Task.Yield();
-            transitionInfo = animator.GetAnimatorTransitionInfo(0);
-        } while (transitionInfo.duration > 0 && transitionInfo.normalizedTime <= 1.0);
-
-        await Task.Yield();
-
-        state = animator.GetCurrentAnimatorStateInfo(0);
-
-        Assert.IsTrue(state.loop == false, "cant wait for animation to finish if it loops");
-        //wait until animation is finished.
-        while (state.normalizedTime < 1.0f)
-        {
-            await Task.Yield();
-            if (IsDestroyed)
-                return;
-            state = animator.GetCurrentAnimatorStateInfo(0);
-        }
-    }
-
     public async Task SetIntAsync(string name, int value)
     {
         var tcs = AddNewTcs();
@@ -395,6 +318,9 @@ namespace com.demo
         ClearTCSs();
     }
 
+    /// <summary>
+    /// Unity forgets the states when disabling the game objects. For this project, we wanted to remember.
+    /// </summary>
     protected virtual void OnEnable()
     {
         foreach (var kvp in bools)
