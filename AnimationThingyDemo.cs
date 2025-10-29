@@ -10,15 +10,14 @@ namespace com.demo
 
     /// <ExplanationForDemo>
     ///    This is a wrapper for animations, duplicating the API of the Unity animator system, to combine thhe usage of the Unity
-    ///    animator with own code driven solutions. DoTween is also already directly supported.
-    ///    It is also providing awaitable async wrappers.
+    ///    animator with own code driven solutions.
+    ///    It is also providing a callback for animation flows that are considered "finished" or alternatively awaitable async wrappers.
+    ///    The way to include own animation systems is to inherit from this class and override the "HandleXXX" methods.
     ///
     ///    This allows programmers to quickly set up an animation by code, and artists to override them by defining the parameters in the Unity animator.
-    ///    It is possible to daisy chain dynamic code driven animations (up to triggering particle systems) with static animator calls.
+    ///    It is also possible to daisy chain dynamic code driven animations (up to triggering particle systems) with static animator calls.
     ///
-    ///    On the downside are some conventions for the defining animation states when using the Unity animator.
-    ///
-    ///    
+    ///    On the downside are some conventions for the definition of animation states when using the Unity animator.
     /// </explanationForDemo>
 
     /// <summary>
@@ -163,7 +162,8 @@ namespace com.demo
 
 
     /// <summary>
-    /// All tweens need to be added this way, in order to await the callback, and in order to be correctly cleaned up by reset;
+    /// All tweens created in own animations need to be added this way.
+    /// That way, they already will be supported by callbacks or async wrappers.
     /// </summary>
     protected void AddTween(Tween tween, Action callback = null)
     {
@@ -370,3 +370,4 @@ namespace com.demo
     }
     }
 }
+
